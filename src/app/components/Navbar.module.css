@@ -1,0 +1,49 @@
+/* src/app/components/Navbar.module.css */
+/* Add to Navbar.module.css */
+
+.notificationIcon {
+  position: relative;
+  margin-left: 20px;
+  cursor: pointer;
+}
+
+.notificationCount {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  background-color: var(--accent-color);
+  color: #ffffff;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.notificationDropdown {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  width: 250px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.notificationItem {
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.notificationItem:last-child {
+  border-bottom: none;
+}
+
+.notificationItem p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notificationItem:hover {
+  background-color: #f9f9f9;
+}

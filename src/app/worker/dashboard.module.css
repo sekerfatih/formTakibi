@@ -1,0 +1,37 @@
+/* src/app/worker/dashboard.module.css */
+
+.formSection {
+  margin-top: 40px;
+}
+
+.form {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.form label {
+  display: block;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.form input[type="text"],
+.form textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.form textarea {
+  resize: vertical;
+  height: 100px;
+}
+
+.feedback {
+  color: red;
+  margin-top: 10px;
+}

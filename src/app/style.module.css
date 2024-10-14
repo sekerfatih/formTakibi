@@ -1,0 +1,72 @@
+.container {
+  display: flex;
+  height: 100vh;
+  background-color: #1d3d7c;
+  padding: 20px;
+
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+}
+.inputContainer {
+  display: flex;
+  flex-direction: column;
+  margin-right: 20px;
+  gap: 10px;
+  align-content: center;
+  justify-content: center;
+  width: 300px;
+}
+.input {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+.header {
+  background-color: #1d3d7c;
+  color: white;
+  height: 7vh;
+  padding: 8px;
+  align-content: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  padding: 5px 10px;
+  background-color: white;
+}
+
+.logoWhite {
+  color: #1d3d7c;
+}
+
+.logoOrange {
+  color: #f7941d;
+}
+
+.loginButton,
+.registerButton {
+  background-color: #f7941d;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  border: 1px solid #ccc;
+  font-weight: bold;
+}
+
+.loginButton:hover,
+.registerButton:hover {
+  background-color: #e77f0f;
+  color: white;
+}
+
+.feedback {
+  color: red;
+  margin-top: 10px;
+}

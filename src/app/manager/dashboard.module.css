@@ -1,0 +1,13 @@
+/* src/app/manager/dashboard.module.css */
+
+.cardsSection {
+  margin-top: 40px;
+}
+
+.card {
+  /* Card styles are already defined in globals.css */
+}
+
+.button {
+  /* Button styles are defined in globals.css */
+}
