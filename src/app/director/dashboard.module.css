@@ -1,13 +1,56 @@
 /* src/app/manager/dashboard.module.css */
 
-.cardsSection {
-  margin-top: 40px;
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px;
+  background-color: #1d3d7c;
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
 }
 
-.card {
-  /* Card styles are already defined in globals.css */
+.container h1 {
+  margin: 10px;
 }
 
-.button {
-  /* Button styles are defined in globals.css */
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(255, 255, 255);
+  color: #000000;
+  padding: 15px;
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.formContainer h3 {
+  align-self: center;
+}
+
+.buttonsContainer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.onaylaButton {
+  background-color: #04c90e;
+  padding: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  border-radius: 5px;
+  border-width: 1px;
+}
+
+.reddetButton {
+  background-color: #ff1111;
+  padding: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  color: rgb(255, 255, 255);
+  border-radius: 5px;
+  border-width: 1px;
 }

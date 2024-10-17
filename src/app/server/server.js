@@ -1,82 +1,193 @@
+// src/server/server.js
 "use server";
 
 import { connectToDatabase } from "../lib/db";
-import { ObjectId } from "mongodb";
+import Form from "../models/Form";
+import Notification from "../models/Notification";
+import Personel from "../models/Personel";
 
-// General fetch function
-async function fetch(collection) {
-  const { db } = await connectToDatabase();
-  if (!db) {
-    throw new Error("Database connection failed");
-  }
-  try {
-    const data = await db.collection(collection).find().toArray();
-    return data;
-  } catch (error) {
-    throw new Error(`Error fetching from ${collection}: ${error.message}`);
+// Utility function to convert ObjectIds to strings, including nested fields
+function convertIdsToStrings(data) {
+  if (Array.isArray(data)) {
+    return data.map((item) => convertItemIdsToStrings(item));
+  } else {
+    return convertItemIdsToStrings(data);
   }
 }
 
-// Fetch users (personel)
-export async function fetchUsers() {
-  return await fetch("personel");
+function convertItemIdsToStrings(item) {
+  const newItem = { ...item };
+
+  // Convert top-level _id
+  if (newItem._id) {
+    newItem._id = newItem._id.toString();
+  }
+
+  // Convert nested ObjectId fields for 'submittedBy'
+  if (newItem.submittedBy && newItem.submittedBy._id) {
+    newItem.submittedBy._id = newItem.submittedBy._id.toString();
+  }
+
+  // Convert ObjectId for managerId inside managerApproval
+  if (newItem.managerApproval && newItem.managerApproval.managerId) {
+    newItem.managerApproval.managerId =
+      newItem.managerApproval.managerId.toString();
+  }
+
+  // Convert ObjectId for directorId inside directorApproval
+  if (newItem.directorApproval && newItem.directorApproval.directorId) {
+    newItem.directorApproval.directorId =
+      newItem.directorApproval.directorId.toString();
+  }
+
+  // Convert 'userId' if present
+  if (newItem.userId) {
+    newItem.userId = newItem.userId.toString();
+  }
+
+  // Convert 'relatedFormId' if present
+  if (newItem.relatedFormId) {
+    newItem.relatedFormId = newItem.relatedFormId.toString();
+  }
+
+  return newItem;
 }
 
 export async function submitForm(formData) {
-  const { db } = await connectToDatabase();
+  await connectToDatabase();
   try {
-    const formsCollection = db.collection("forms");
-    await formsCollection.insertOne({
-      ...formData,
-      status: "pending",
-      createdAt: new Date(),
-    });
+    let newForm;
+
+    // Check if the user submitting the form is a manager
+    const submittingUser = await Personel.findById(formData.submittedBy);
+    const isManager = submittingUser && submittingUser.role === "manager";
+
+    if (isManager) {
+      // Manager submitting the form
+      newForm = new Form({
+        ...formData,
+        status: formData.requiresDirectorApproval
+          ? "approved by manager"
+          : "approved",
+        managerApproval: {
+          approved: true,
+          approvedAt: new Date(),
+          managerId: formData.submittedBy,
+        },
+      });
+    } else {
+      // Worker submitting the form
+      newForm = new Form({
+        ...formData,
+        status: "pending",
+      });
+    }
+
+    await newForm.save();
+
+    // Notify the director if it requires their approval
+    if (isManager && formData.requiresDirectorApproval) {
+      const director = await Personel.findOne({ role: "director" });
+      if (director) {
+        const newNotification = new Notification({
+          userId: director._id,
+          message: `Yeni bir form onay bekliyor: ${newForm.title}`,
+          isRead: false,
+          relatedFormId: newForm._id,
+        });
+        await newNotification.save();
+      }
+    } else if (isManager) {
+      // Notify the manager (as a worker) that the form is approved
+      const newNotification = new Notification({
+        userId: formData.submittedBy,
+        message: `Formunuz onaylandı: ${newForm.title}`,
+        isRead: false,
+        relatedFormId: newForm._id,
+      });
+      await newNotification.save();
+    } else {
+      // Notify the manager if a worker submits a form
+      const manager = await Personel.findOne({ role: "manager" });
+      if (manager) {
+        const newNotification = new Notification({
+          userId: manager._id,
+          message: `Yeni bir form onay bekliyor: ${newForm.title}`,
+          isRead: false,
+        });
+        await newNotification.save();
+      }
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error submitting form:", error);
     return { success: false, message: "Sunucu hatası oluştu." };
   }
 }
+
 export async function fetchPendingForms() {
-  const { db } = await connectToDatabase();
+  await connectToDatabase();
   try {
-    const formsCollection = db.collection("forms");
-    const pendingForms = await formsCollection
-      .find({ status: "pending" })
-      .toArray();
-    return { success: true, forms: pendingForms };
+    const pendingForms = await Form.find({ status: "pending" })
+      .populate("submittedBy", "ad soyad sicil role")
+      .lean();
+
+    const formsWithStringIds = convertIdsToStrings(pendingForms);
+    return { success: true, forms: formsWithStringIds };
   } catch (error) {
     console.error("Error fetching pending forms:", error);
     return { success: false, message: "Sunucu hatası oluştu." };
   }
 }
 
-export async function approveForm(formId, isApproved) {
-  const { db } = await connectToDatabase();
+export async function approveForm(formId, isApproved, managerId) {
+  await connectToDatabase();
   try {
-    const formsCollection = db.collection("forms");
-    const form = await formsCollection.findOne({ _id: new ObjectId(formId) });
+    const form = await Form.findById(formId);
     if (!form) {
       return { success: false, message: "Form bulunamadı." };
     }
 
-    const newStatus = isApproved ? "manager_approved" : "rejected";
+    form.managerApproval = {
+      approved: isApproved,
+      approvedAt: new Date(),
+      managerId,
+    };
 
-    await formsCollection.updateOne(
-      { _id: new ObjectId(formId) },
-      { $set: { status: newStatus } }
-    );
+    if (!isApproved) {
+      // If disapproved, set status to 'rejected'
+      form.status = "rejected";
+    } else if (form.requiresDirectorApproval) {
+      // If approved and requires director approval
+      form.status = "approved by manager";
 
-    const notificationsCollection = db.collection("notifications");
-    await notificationsCollection.insertOne({
-      userId: "director_user_id", // Replace with actual director user ID
-      message: `Yeni bir form onay bekliyor: ${form.title}`,
-      isRead: false,
-      createdAt: new Date(),
-    });
+      // Notify the director
+      const director = await Personel.findOne({ role: "director" });
+      if (director) {
+        const newNotification = new Notification({
+          userId: director._id,
+          message: `Yeni bir form onay bekliyor: ${form.title}`,
+          isRead: false,
+          relatedFormId: form._id,
+        });
+        await newNotification.save();
+      }
+    } else {
+      // If approved and does NOT require director approval
+      form.status = "approved";
 
-    // Optionally, create a notification here
+      // Notify the worker
+      const newNotification = new Notification({
+        userId: form.submittedBy.toString(),
+        message: `Formunuz onaylandı: ${form.title}`,
+        isRead: false,
+        relatedFormId: form._id,
+      });
+      await newNotification.save();
+    }
 
+    await form.save();
     return { success: true };
   } catch (error) {
     console.error("Error approving form:", error);
@@ -85,49 +196,50 @@ export async function approveForm(formId, isApproved) {
 }
 
 export async function fetchManagerApprovedForms() {
-  const { db } = await connectToDatabase();
+  await connectToDatabase();
   try {
-    const formsCollection = db.collection("forms");
-    const approvedForms = await formsCollection
-      .find({ status: "manager_approved" })
-      .toArray();
-    return { success: true, forms: approvedForms };
+    const approvedForms = await Form.find({
+      status: "approved by manager",
+      requiresDirectorApproval: true,
+    })
+      .populate("submittedBy", "ad soyad sicil role")
+      .lean();
+
+    const formsWithStringIds = convertIdsToStrings(approvedForms);
+    return { success: true, forms: formsWithStringIds };
   } catch (error) {
     console.error("Error fetching manager-approved forms:", error);
     return { success: false, message: "Sunucu hatası oluştu." };
   }
 }
 
-export async function finalApproveForm(formId, isApproved) {
-  const { db } = await connectToDatabase();
+export async function finalApproveForm(formId, isApproved, directorId) {
+  await connectToDatabase();
   try {
-    const formsCollection = db.collection("forms");
-    const form = await formsCollection.findOne({ _id: new ObjectId(formId) });
+    const form = await Form.findById(formId);
     if (!form) {
       return { success: false, message: "Form bulunamadı." };
     }
 
-    const newStatus = isApproved ? "director_approved" : "rejected";
+    form.directorApproval = {
+      approved: isApproved,
+      approvedAt: new Date(),
+      directorId,
+    };
 
-    await formsCollection.updateOne(
-      { _id: new ObjectId(formId) },
-      { $set: { status: newStatus } }
-    );
+    form.status = isApproved ? "approved" : "rejected";
+    await form.save();
 
-    // Inside finalApproveForm after updating form status
-
-    // Create a notification for the worker
-    const notificationsCollection = db.collection("notifications");
-    await notificationsCollection.insertOne({
-      userId: form.submittedBy,
+    // Notify the worker
+    const newNotification = new Notification({
+      userId: form.submittedBy.toString(),
       message: `Formunuz ${isApproved ? "onaylandı" : "reddedildi"}: ${
         form.title
       }`,
       isRead: false,
-      createdAt: new Date(),
+      relatedFormId: form._id,
     });
-
-    // Optionally, create a notification here
+    await newNotification.save();
 
     return { success: true };
   } catch (error) {
@@ -135,14 +247,16 @@ export async function finalApproveForm(formId, isApproved) {
     return { success: false, message: "Sunucu hatası oluştu." };
   }
 }
+
 export async function fetchNotifications(userId) {
-  const { db } = await connectToDatabase();
+  await connectToDatabase();
   try {
-    const notificationsCollection = db.collection("notifications");
-    const notifications = await notificationsCollection
-      .find({ userId, isRead: false })
-      .toArray();
-    return { success: true, notifications };
+    const notifications = await Notification.find({ userId, isRead: false })
+      .populate("userId", "ad soyad sicil role")
+      .lean();
+
+    const notificationsWithStringIds = convertIdsToStrings(notifications);
+    return { success: true, notifications: notificationsWithStringIds };
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return { success: false, message: "Sunucu hatası oluştu." };
@@ -150,16 +264,31 @@ export async function fetchNotifications(userId) {
 }
 
 export async function markNotificationAsRead(notificationId) {
-  const { db } = await connectToDatabase();
+  await connectToDatabase();
   try {
-    const notificationsCollection = db.collection("notifications");
-    await notificationsCollection.updateOne(
-      { _id: new ObjectId(notificationId) },
-      { $set: { isRead: true } }
-    );
+    await Notification.findByIdAndUpdate(notificationId, { isRead: true });
     return { success: true };
   } catch (error) {
     console.error("Error marking notification as read:", error);
+    return { success: false, message: "Sunucu hatası oluştu." };
+  }
+}
+
+export async function fetchFormById(formId) {
+  await connectToDatabase();
+  try {
+    const form = await Form.findById(formId)
+      .populate("submittedBy", "ad soyad sicil role")
+      .lean();
+
+    if (!form) {
+      return { success: false, message: "Form bulunamadı." };
+    }
+
+    const formWithStringIds = convertIdsToStrings(form);
+    return { success: true, form: formWithStringIds };
+  } catch (error) {
+    console.error("Error fetching form by ID:", error);
     return { success: false, message: "Sunucu hatası oluştu." };
   }
 }

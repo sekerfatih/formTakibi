@@ -5,6 +5,7 @@
   position: relative;
   margin-left: 20px;
   cursor: pointer;
+  color: #1d3d7c;
 }
 
 .notificationCount {
@@ -46,4 +47,39 @@
 
 .notificationItem:hover {
   background-color: #f9f9f9;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+
+  background-color: white;
+}
+
+.logoWhite {
+  color: #1d3d7c;
+}
+
+.logoOrange {
+  color: #f7941d;
+}
+.navLinks {
+  display: flex;
+  align-items: center;
+  justify-content: END;
+  width: 100%;
+  color: white;
+}
+.navContainer {
+  display: flex;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  color: white;
+  width: 100%;
+}
+
+.navLinks label {
+  color: #e0e0e0;
 }

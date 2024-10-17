@@ -1,13 +1,26 @@
 /* src/app/worker/dashboard.module.css */
 
+.container h1 {
+  display: flex;
+  margin: 30px;
+  justify-content: center;
+  align-content: center;
+}
+
 .formSection {
   margin-top: 40px;
+  margin: 20px;
+  border-radius: 10px;
+  background-color: #e4e4e4;
+  padding: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .form {
   background-color: #ffffff;
   padding: 20px;
-  border-radius: 4px;
+  border-radius: 10px;
+  margin-top: 5px;
 }
 
 .form label {
@@ -34,4 +47,7 @@
 .feedback {
   color: red;
   margin-top: 10px;
+}
+.label {
+  margin-right: 10px;
 }

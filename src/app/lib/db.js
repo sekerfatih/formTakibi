@@ -1,13 +1,17 @@
-import { MongoClient } from "mongodb";
+// src/lib/db.js
+import mongoose from "mongoose";
 
-const uri = process.env.MONGODB_URI;
-let client;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 export async function connectToDatabase() {
-  if (!client) {
-    client = new MongoClient(uri);
-    await client.connect();
+  if (mongoose.connection.readyState === 1) {
+    return;
   }
-  const db = client.db("aselsan");
-  return { db };
+
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
 }

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { getUser } from "../utils/auth";
 import { fetchManagerApprovedForms, finalApproveForm } from "../server/server";
 import { logoutUser } from "../server/loginActions";
+import Navbar from "../components/page.js";
+import styles from "./dashboard.module.css";
 
 export default function DirectorDashboard() {
   const router = useRouter();
@@ -31,7 +33,7 @@ export default function DirectorDashboard() {
 
   const handleApproval = (formId, isApproved) => {
     startTransition(async () => {
-      const result = await finalApproveForm(formId, isApproved);
+      const result = await finalApproveForm(formId, isApproved, cachedUser.id); // Pass directorId
       if (result.success) {
         // Update the forms list
         setForms(forms.filter((form) => form._id !== formId));
@@ -40,27 +42,42 @@ export default function DirectorDashboard() {
   };
 
   return (
-    <div>
-      <h1>Director Dashboard</h1>
-      {/* Existing director-specific content */}
+    <div className={styles.main}>
+      <Navbar />
+      <div className={styles.container}>
+        <h1>Director Dashboard</h1>
 
-      <h2>Son Onay Bekleyen Formlar</h2>
-      {forms.length === 0 ? (
-        <p>Onay bekleyen form yok.</p>
-      ) : (
-        forms.map((form) => (
-          <div key={form._id}>
-            <h3>{form.title}</h3>
-            <p>{form.description}</p>
-            <button onClick={() => handleApproval(form._id, true)}>
-              Onayla
-            </button>
-            <button onClick={() => handleApproval(form._id, false)}>
-              Reddet
-            </button>
-          </div>
-        ))
-      )}
+        <h2>Son Onay Bekleyen Formlar</h2>
+        {forms.length === 0 ? (
+          <p>Onay bekleyen form yok.</p>
+        ) : (
+          forms.map((form) => (
+            <div className={styles.formContainer} key={form._id}>
+              <h3>{form.title}</h3>
+              <p>{form.description}</p>
+              <p>
+                Gönderen: {form.submittedBy.ad} {form.submittedBy.soyad}
+              </p>
+              <p>Sicil: {form.submittedBy.sicil}</p>
+              <p>Rol: {form.submittedBy.role}</p>
+              <div className={styles.buttonsContainer}>
+                <button
+                  className={styles.onaylaButton}
+                  onClick={() => handleApproval(form._id, true)}
+                >
+                  Onayla
+                </button>
+                <button
+                  className={styles.reddetButton}
+                  onClick={() => handleApproval(form._id, false)}
+                >
+                  Reddet
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
